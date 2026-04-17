@@ -1,88 +1,88 @@
 # API WAOK
 
-REST API para la gestión de tareas hospitalarias. Cada hospital administra sus propias tareas en aislamiento total (multi-tenencia). Construida con NestJS, Prisma ORM y PostgreSQL, siguiendo TDD como metodología de desarrollo.
+REST API for hospital task management. Each hospital manages its own tasks in full isolation (multi-tenancy). Built with NestJS, Prisma ORM, and PostgreSQL, developed with TDD.
 
 ## Stack
 
-| Capa | Tecnología |
+| Layer | Technology |
 |---|---|
 | Framework | NestJS 11 |
 | ORM | Prisma 7 |
-| Base de datos | PostgreSQL 16 (Docker) |
-| Lenguaje | TypeScript |
+| Database | PostgreSQL 16 (Docker) |
+| Language | TypeScript |
 | Testing | Jest |
 
 ---
 
-## Requisitos previos
+## Prerequisites
 
 - [Node.js](https://nodejs.org) >= 20
-- [Docker](https://www.docker.com) y Docker Compose
+- [Docker](https://www.docker.com) and Docker Compose
 
 ---
 
-## Setup inicial
+## Setup
 
-### 1. Clonar el repositorio e instalar dependencias
+### 1. Clone the repository and install dependencies
 
 ```bash
-git clone <url-del-repo>
+git clone <repo-url>
 cd api-waok
 npm install
 ```
 
-### 2. Configurar variables de entorno
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Editar `.env` con tus valores:
+Edit `.env` with your values:
 
 ```env
-DATABASE_URL=postgresql://usuario:contraseña@localhost:5432/waok_db
-DB_USER=usuario
-DB_PASSWORD=contraseña
+DATABASE_URL=postgresql://user:password@localhost:5432/waok_db
+DB_USER=user
+DB_PASSWORD=password
 DB_NAME=waok_db
 PORT=3000
 NODE_ENV=development
 ```
 
-### 3. Levantar la base de datos con Docker
+### 3. Start the database with Docker
 
 ```bash
 docker compose up -d
 ```
 
-Verificar que el contenedor esté corriendo:
+Verify the container is running:
 
 ```bash
 docker compose ps
 ```
 
-### 4. Ejecutar migraciones de Prisma
+### 4. Run Prisma migrations
 
 ```bash
 npx prisma migrate dev
 ```
 
-Esto aplica todas las migraciones en orden y regenera el cliente de Prisma.
+Applies all migrations in order and regenerates the Prisma client.
 
-### 5. Poblar la base de datos (seed)
+### 5. Seed the database
 
 ```bash
 npx prisma db seed
 ```
 
-Crea 2 hospitales y 5 tareas de ejemplo para pruebas con Postman.
+Creates 2 hospitals and 5 sample tasks for Postman testing.
 
-### 6. Iniciar el servidor
+### 6. Start the server
 
 ```bash
 npm run start:dev
 ```
 
-El servidor queda disponible en `http://localhost:3000`.
+Server available at `http://localhost:3000`.
 
 ---
 
@@ -90,26 +90,26 @@ El servidor queda disponible en `http://localhost:3000`.
 
 ### Hospital
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `POST` | `/hospital` | Crear hospital |
-| `GET` | `/hospital` | Listar hospitales activos |
-| `GET` | `/hospital/:id` | Obtener un hospital |
-| `PATCH` | `/hospital/:id` | Actualizar hospital |
-| `DELETE` | `/hospital/:id` | Eliminar hospital (soft delete) |
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/hospital` | Create hospital |
+| `GET` | `/hospital` | List active hospitals |
+| `GET` | `/hospital/:id` | Get a hospital |
+| `PATCH` | `/hospital/:id` | Update hospital |
+| `DELETE` | `/hospital/:id` | Delete hospital (soft delete) |
 
-### Tareas (anidadas por hospital)
+### Tasks (nested under hospital)
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `POST` | `/hospital/:hospitalId/task` | Crear tarea |
-| `GET` | `/hospital/:hospitalId/task` | Listar tareas activas |
-| `GET` | `/hospital/:hospitalId/task/:id` | Obtener una tarea |
-| `PATCH` | `/hospital/:hospitalId/task/:id` | Actualizar tarea |
-| `DELETE` | `/hospital/:hospitalId/task/:id` | Eliminar tarea (soft delete) |
-| `PATCH` | `/hospital/:hospitalId/task/:id/status` | Cambiar estado |
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/hospital/:hospitalId/task` | Create task |
+| `GET` | `/hospital/:hospitalId/task` | List active tasks |
+| `GET` | `/hospital/:hospitalId/task/:id` | Get a task |
+| `PATCH` | `/hospital/:hospitalId/task/:id` | Update task |
+| `DELETE` | `/hospital/:hospitalId/task/:id` | Delete task (soft delete) |
+| `PATCH` | `/hospital/:hospitalId/task/:id/status` | Change status |
 
-#### Filtros disponibles en `GET /hospital/:hospitalId/task`
+#### Available filters on `GET /hospital/:hospitalId/task`
 
 ```
 ?status=PENDING
@@ -117,7 +117,7 @@ El servidor queda disponible en `http://localhost:3000`.
 ?status=IN_PROGRESS&priority=URGENT
 ```
 
-#### Valores válidos de `status`
+#### Valid `status` values and transitions
 
 ```
 PENDING → IN_PROGRESS → COMPLETED
@@ -125,15 +125,15 @@ PENDING → IN_PROGRESS → COMPLETED
 PENDING → CANCELLED
 ```
 
-#### Valores válidos de `priority`
+#### Valid `priority` values
 
 `LOW` · `MEDIUM` · `HIGH` · `URGENT`
 
 ---
 
-## Formato de respuesta
+## Response format
 
-**Éxito:**
+**Success:**
 ```json
 {
   "data": {},
@@ -145,7 +145,7 @@ PENDING → CANCELLED
 ```json
 {
   "statusCode": 400,
-  "message": "descripción del error",
+  "message": "error description",
   "error": "Bad Request"
 }
 ```
@@ -155,30 +155,30 @@ PENDING → CANCELLED
 ## Tests
 
 ```bash
-# tests unitarios
+# unit tests
 npm run test
 
-# modo watch
+# watch mode
 npm run test:watch
 
-# cobertura
+# coverage
 npm run test:cov
 ```
 
 ---
 
-## Comandos útiles de Prisma
+## Prisma commands
 
 ```bash
-# crear una nueva migración
-npx prisma migrate dev --name nombre_migracion
+# create a new migration
+npx prisma migrate dev --name migration_name
 
-# regenerar el cliente (después de cambiar el schema)
+# regenerate the client (after schema changes)
 npx prisma generate
 
-# abrir Prisma Studio (UI para explorar la DB)
+# open Prisma Studio (DB UI explorer)
 npx prisma studio
 
-# resetear la DB y re-ejecutar migraciones + seed
+# reset DB and re-run migrations + seed
 npx prisma migrate reset
 ```
