@@ -123,10 +123,28 @@ describe('TaskService', () => {
       expect(result).toEqual(baseTask);
     });
 
-    it('should throw NotFoundException if task does not exist or belongs to another hospital', async () => {
+    it('should throw NotFoundException if task does not exist', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne('h1', '999')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when task belongs to another hospital', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('h2', '1')).rejects.toThrow(NotFoundException);
+      expect(mockPrismaService.task.findUnique).toHaveBeenCalledWith({
+        where: { id: '1', hospitalId: 'h2', deletedAt: null },
+      });
+    });
+
+    it('should throw NotFoundException when task is soft-deleted', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('h1', '1')).rejects.toThrow(NotFoundException);
+      expect(mockPrismaService.task.findUnique).toHaveBeenCalledWith({
+        where: { id: '1', hospitalId: 'h1', deletedAt: null },
+      });
     });
   });
 
@@ -151,6 +169,16 @@ describe('TaskService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
       await expect(service.update('h1', '999', { status: TaskStatus.COMPLETED })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when updating a task that belongs to another hospital', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(service.update('h2', '1', { status: TaskStatus.COMPLETED })).rejects.toThrow(NotFoundException);
+      expect(mockPrismaService.task.findUnique).toHaveBeenCalledWith({
+        where: { id: '1', hospitalId: 'h2', deletedAt: null },
+      });
+      expect(mockPrismaService.task.update).not.toHaveBeenCalled();
     });
   });
 
@@ -242,6 +270,14 @@ describe('TaskService', () => {
       await expect(service.updateStatus('h1', '1', TaskStatus.PENDING)).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException for invalid transition IN_PROGRESS → PENDING', async () => {
+      const task = { ...baseTask, status: TaskStatus.IN_PROGRESS };
+      mockPrismaService.task.findUnique.mockResolvedValue(task);
+
+      await expect(service.updateStatus('h1', '1', TaskStatus.PENDING)).rejects.toThrow(BadRequestException);
+      expect(mockPrismaService.task.update).not.toHaveBeenCalled();
+    });
+
     it('should throw NotFoundException if task does not belong to hospital', async () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
@@ -281,6 +317,24 @@ describe('TaskService', () => {
         [TaskStatus.IN_PROGRESS]: { count: 0, percentage: 0 },
         [TaskStatus.COMPLETED]:   { count: 0, percentage: 0 },
         [TaskStatus.CANCELLED]:   { count: 0, percentage: 0 },
+      });
+    });
+
+    it('should return counts and percentages for all four statuses when populated', async () => {
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { status: TaskStatus.PENDING, _count: { status: 2 } },
+        { status: TaskStatus.IN_PROGRESS, _count: { status: 3 } },
+        { status: TaskStatus.COMPLETED, _count: { status: 4 } },
+        { status: TaskStatus.CANCELLED, _count: { status: 1 } },
+      ]);
+
+      const result = await service.getStats('h1');
+
+      expect(result).toEqual({
+        [TaskStatus.PENDING]:     { count: 2, percentage: 20 },
+        [TaskStatus.IN_PROGRESS]: { count: 3, percentage: 30 },
+        [TaskStatus.COMPLETED]:   { count: 4, percentage: 40 },
+        [TaskStatus.CANCELLED]:   { count: 1, percentage: 10 },
       });
     });
 
