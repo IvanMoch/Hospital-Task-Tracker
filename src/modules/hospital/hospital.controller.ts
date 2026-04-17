@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HospitalService } from './hospital.service';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
@@ -36,6 +36,14 @@ export class HospitalController {
   @ApiOkResponse({ description: 'Hospital updated.' })
   @ApiNotFoundResponse({ description: 'Hospital not found.' })
   update(@Param('id') id: string, @Body() dto: UpdateHospitalDto) {
+    return this.hospitalService.update(id, dto);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Replace a hospital' })
+  @ApiOkResponse({ description: 'Hospital updated.' })
+  @ApiNotFoundResponse({ description: 'Hospital not found.' })
+  replace(@Param('id') id: string, @Body() dto: UpdateHospitalDto) {
     return this.hospitalService.update(id, dto);
   }
 

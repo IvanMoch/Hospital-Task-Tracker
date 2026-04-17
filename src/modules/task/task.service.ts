@@ -4,6 +4,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
 import { TaskStatus } from './dto/task-status.enum';
+import { HospitalService } from '../hospital/hospital.service';
 
 const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   [TaskStatus.PENDING]: [TaskStatus.IN_PROGRESS, TaskStatus.CANCELLED],
@@ -14,13 +15,18 @@ const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly hospitalService: HospitalService,
+  ) {}
 
   async create(hospitalId: string, dto: CreateTaskDto) {
+    await this.ensureHospitalExists(hospitalId);
     return this.prisma.task.create({ data: { ...dto, hospitalId } });
   }
 
   async findAll(hospitalId: string, filters: FilterTaskDto) {
+    await this.ensureHospitalExists(hospitalId);
     return this.prisma.task.findMany({
       where: {
         hospitalId,
@@ -32,6 +38,7 @@ export class TaskService {
   }
 
   async findOne(hospitalId: string, id: string) {
+    await this.ensureHospitalExists(hospitalId);
     const task = await this.prisma.task.findUnique({
       where: { id, hospitalId, deletedAt: null },
     });
@@ -64,6 +71,7 @@ export class TaskService {
   }
 
   async getStats(hospitalId: string): Promise<Record<TaskStatus, { count: number; percentage: number }>> {
+    await this.ensureHospitalExists(hospitalId);
     const rows = await this.prisma.task.groupBy({
       by: ['status'],
       where: { hospitalId, deletedAt: null },
@@ -81,5 +89,16 @@ export class TaskService {
       },
       {} as Record<TaskStatus, { count: number; percentage: number }>,
     );
+  }
+
+  private async ensureHospitalExists(hospitalId: string) {
+    try {
+      await this.hospitalService.findOne(hospitalId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException('Hospital not found');
+      }
+      throw error;
+    }
   }
 }
