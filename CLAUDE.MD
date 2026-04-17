@@ -137,6 +137,69 @@ npm run build                                     # build
 - Services own Prisma interactions — never query Prisma from controllers
 - No hard deletes in application code — always soft delete
 
+## Multi-tenancy Convention
+
+Resources that belong to a hospital are exposed via **nested routes**. The `hospitalId` always comes from the route param — never from the request body.
+
+### Route structure
+
+```
+POST   /hospital/:hospitalId/<resource>
+GET    /hospital/:hospitalId/<resource>
+GET    /hospital/:hospitalId/<resource>/:id
+PATCH  /hospital/:hospitalId/<resource>/:id
+DELETE /hospital/:hospitalId/<resource>/:id
+```
+
+### Controller pattern
+
+```ts
+@Controller('hospital/:hospitalId/<resource>')
+export class <Resource>Controller {
+  @Get()
+  findAll(@Param('hospitalId') hospitalId: string) {
+    return this.<resource>Service.findAll(hospitalId);
+  }
+
+  @Post()
+  create(@Param('hospitalId') hospitalId: string, @Body() dto: Create<Resource>Dto) {
+    return this.<resource>Service.create(hospitalId, dto);
+  }
+}
+```
+
+### Service pattern
+
+- `hospitalId` is the first parameter of every method.
+- `findAll` filters by both `hospitalId` and `deletedAt: null`.
+- `findOne` includes `hospitalId` in the `where` clause — returns `NotFoundException` if the record doesn't exist or belongs to a different hospital.
+- `create` injects `hospitalId` into the data: `{ ...dto, hospitalId }`.
+- `update` and `remove` call `findOne(hospitalId, id)` first to enforce ownership.
+
+```ts
+async findAll(hospitalId: string) {
+  return this.prisma.<model>.findMany({ where: { hospitalId, deletedAt: null } });
+}
+
+async findOne(hospitalId: string, id: string) {
+  const record = await this.prisma.<model>.findUnique({
+    where: { id, hospitalId, deletedAt: null },
+  });
+  if (!record) throw new NotFoundException('<Resource> not found');
+  return record;
+}
+
+async create(hospitalId: string, dto: Create<Resource>Dto) {
+  return this.prisma.<model>.create({ data: { ...dto, hospitalId } });
+}
+```
+
+### DTO rule
+
+DTOs for nested resources must **not** include `hospitalId` — it comes exclusively from the route.
+
+---
+
 ## API Response Convention
 
 Success:
