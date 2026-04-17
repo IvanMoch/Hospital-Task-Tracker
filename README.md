@@ -86,6 +86,18 @@ Server available at `http://localhost:3000`.
 
 ---
 
+## API Documentation (Swagger)
+
+With the server running in development, the interactive docs are available at:
+
+```
+http://localhost:3000/docs
+```
+
+> Swagger is only available when `NODE_ENV !== 'production'`. In production the `/docs` route returns 404.
+
+---
+
 ## Endpoints
 
 ### Hospital
@@ -108,6 +120,7 @@ Server available at `http://localhost:3000`.
 | `PATCH` | `/hospital/:hospitalId/task/:id` | Update task |
 | `DELETE` | `/hospital/:hospitalId/task/:id` | Delete task (soft delete) |
 | `PATCH` | `/hospital/:hospitalId/task/:id/status` | Change status |
+| `GET` | `/hospital/:hospitalId/task/stats` | Task counts and percentages per status |
 
 #### Available filters on `GET /hospital/:hospitalId/task`
 
