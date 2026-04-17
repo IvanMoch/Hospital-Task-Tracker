@@ -62,6 +62,36 @@ describe('HospitalService', () => {
     });
   });
 
+  describe('findOne', () => {
+    it('should return the hospital when it exists and is active', async () => {
+      const existing = { id: '1', name: 'Hospital Central', code: 'HC-01', deletedAt: null };
+
+      mockPrismaService.hospital.findUnique.mockResolvedValue(existing);
+
+      const result = await service.findOne('1');
+
+      expect(mockPrismaService.hospital.findUnique).toHaveBeenCalledWith({
+        where: { id: '1', deletedAt: null },
+      });
+      expect(result).toEqual(existing);
+    });
+
+    it('should throw NotFoundException when hospital does not exist', async () => {
+      mockPrismaService.hospital.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('999')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when hospital is soft-deleted', async () => {
+      mockPrismaService.hospital.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
+      expect(mockPrismaService.hospital.findUnique).toHaveBeenCalledWith({
+        where: { id: '1', deletedAt: null },
+      });
+    });
+  });
+
   describe('update', () => {
     it('should update an active hospital and return it', async () => {
       const dto: UpdateHospitalDto = { name: 'Hospital Actualizado' };
