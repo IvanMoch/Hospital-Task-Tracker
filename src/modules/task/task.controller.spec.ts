@@ -89,8 +89,8 @@ describe('TaskController', () => {
 
   describe('PATCH /hospital/:hospitalId/task/:id', () => {
     it('should call service.update with hospitalId, id and dto', async () => {
-      const dto: UpdateTaskDto = { status: TaskStatus.COMPLETED };
-      const updated = { ...baseTask, status: TaskStatus.COMPLETED };
+      const dto: UpdateTaskDto = { title: 'Revisión equipos actualizada' };
+      const updated = { ...baseTask, title: 'Revisión equipos actualizada' };
 
       mockTaskService.update.mockResolvedValue(updated);
 

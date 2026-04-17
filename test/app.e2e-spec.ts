@@ -5,7 +5,7 @@ import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
 
-describe('AppController (e2e)', () => {
+describe('Health (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -24,10 +24,15 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  it('/ (GET)', () => {
+  it('/health (GET) returns the raw health payload without response wrapper', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/health')
       .expect(200)
-      .expect({ data: 'Hello World!', message: '' });
+      .expect((res) => {
+        expect(res.body).toEqual({
+          status: 'ok',
+          timestamp: expect.any(String),
+        });
+      });
   });
 });

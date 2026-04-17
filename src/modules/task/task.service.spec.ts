@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { HospitalService } from '../hospital/hospital.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTaskDto } from './dto/filter-task.dto';
@@ -16,6 +17,10 @@ const mockPrismaService = {
     update: jest.fn(),
     groupBy: jest.fn(),
   },
+};
+
+const mockHospitalService = {
+  findOne: jest.fn(),
 };
 
 const baseTask = {
@@ -38,11 +43,18 @@ describe('TaskService', () => {
       providers: [
         TaskService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: HospitalService, useValue: mockHospitalService },
       ],
     }).compile();
 
     service = module.get<TaskService>(TaskService);
     jest.clearAllMocks();
+    mockHospitalService.findOne.mockResolvedValue({
+      id: 'h1',
+      name: 'Hospital Central',
+      code: 'HC-01',
+      deletedAt: null,
+    });
   });
 
   describe('create', () => {
@@ -60,6 +72,7 @@ describe('TaskService', () => {
       expect(mockPrismaService.task.create).toHaveBeenCalledWith({
         data: { ...dto, hospitalId: 'h1' },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
       expect(result).toEqual(baseTask);
     });
   });
@@ -73,6 +86,7 @@ describe('TaskService', () => {
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
         where: { hospitalId: 'h1', deletedAt: null },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
       expect(result).toEqual([baseTask]);
     });
 
@@ -85,6 +99,7 @@ describe('TaskService', () => {
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
         where: { hospitalId: 'h1', deletedAt: null, status: TaskStatus.IN_PROGRESS },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
       expect(result).toEqual(filtered);
     });
 
@@ -97,6 +112,7 @@ describe('TaskService', () => {
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
         where: { hospitalId: 'h1', deletedAt: null, priority: TaskPriority.HIGH },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
       expect(result).toEqual(filtered);
     });
 
@@ -108,6 +124,7 @@ describe('TaskService', () => {
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
         where: { hospitalId: 'h1', deletedAt: null, status: TaskStatus.PENDING, priority: TaskPriority.HIGH },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
     });
   });
 
@@ -120,6 +137,7 @@ describe('TaskService', () => {
       expect(mockPrismaService.task.findUnique).toHaveBeenCalledWith({
         where: { id: '1', hospitalId: 'h1', deletedAt: null },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
       expect(result).toEqual(baseTask);
     });
 
@@ -127,6 +145,13 @@ describe('TaskService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne('h1', '999')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when hospital does not exist', async () => {
+      mockHospitalService.findOne.mockRejectedValueOnce(new NotFoundException('Hospital not found'));
+
+      await expect(service.findOne('missing-hospital', '1')).rejects.toThrow('Hospital not found');
+      expect(mockPrismaService.task.findUnique).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when task belongs to another hospital', async () => {
@@ -150,8 +175,8 @@ describe('TaskService', () => {
 
   describe('update', () => {
     it('should update a task that belongs to the hospital', async () => {
-      const dto: UpdateTaskDto = { status: TaskStatus.COMPLETED };
-      const updated = { ...baseTask, status: TaskStatus.COMPLETED };
+      const dto: UpdateTaskDto = { title: 'Nuevo titulo' };
+      const updated = { ...baseTask, title: 'Nuevo titulo' };
 
       mockPrismaService.task.findUnique.mockResolvedValue(baseTask);
       mockPrismaService.task.update.mockResolvedValue(updated);
@@ -299,6 +324,7 @@ describe('TaskService', () => {
         where: { hospitalId: 'h1', deletedAt: null },
         _count: { status: true },
       });
+      expect(mockHospitalService.findOne).toHaveBeenCalledWith('h1');
       expect(result).toEqual({
         [TaskStatus.PENDING]:     { count: 3, percentage: 75 },
         [TaskStatus.IN_PROGRESS]: { count: 1, percentage: 25 },
@@ -348,6 +374,13 @@ describe('TaskService', () => {
 
       expect(result[TaskStatus.PENDING].percentage).toBe(33.33);
       expect(result[TaskStatus.IN_PROGRESS].percentage).toBe(66.67);
+    });
+
+    it('should throw NotFoundException when hospital does not exist', async () => {
+      mockHospitalService.findOne.mockRejectedValueOnce(new NotFoundException('Hospital not found'));
+
+      await expect(service.getStats('missing-hospital')).rejects.toThrow('Hospital not found');
+      expect(mockPrismaService.task.groupBy).not.toHaveBeenCalled();
     });
   });
 });

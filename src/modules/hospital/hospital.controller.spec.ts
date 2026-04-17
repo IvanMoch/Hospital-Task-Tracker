@@ -80,6 +80,20 @@ describe('HospitalController', () => {
     });
   });
 
+  describe('PUT /hospitals/:id', () => {
+    it('should call service.update with id and dto and return the result', async () => {
+      const dto: UpdateHospitalDto = { code: 'HC-99' };
+      const updated = { id: '1', name: 'Hospital Central', code: 'HC-99' };
+
+      mockHospitalService.update.mockResolvedValue(updated);
+
+      const result = await controller.replace('1', dto);
+
+      expect(mockHospitalService.update).toHaveBeenCalledWith('1', dto);
+      expect(result).toEqual(updated);
+    });
+  });
+
   describe('DELETE /hospitals/:id', () => {
     it('should call service.remove with the id', async () => {
       mockHospitalService.remove.mockResolvedValue(undefined);

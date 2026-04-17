@@ -21,8 +21,11 @@ type Task = {
 
 function createPrismaMock() {
   const tasks = new Map<string, Task>();
+  const hospitals = new Map<string, { id: string; name: string; code: string; deletedAt: Date | null }>();
   let autoId = 0;
   const nextId = () => `t-${++autoId}`;
+  hospitals.set('h1', { id: 'h1', name: 'Hospital 1', code: 'H1', deletedAt: null });
+  hospitals.set('h2', { id: 'h2', name: 'Hospital 2', code: 'H2', deletedAt: null });
 
   const matches = (task: Task, where: Partial<Task>): boolean =>
     Object.entries(where).every(([k, v]) => (task as Record<string, unknown>)[k] === v);
@@ -82,6 +85,14 @@ function createPrismaMock() {
           status,
           _count: { status: count },
         }));
+      }),
+    },
+    hospital: {
+      findUnique: jest.fn(async ({ where }: { where: { id: string; deletedAt?: null } }) => {
+        const hospital = hospitals.get(where.id);
+        if (!hospital) return null;
+        if (where.deletedAt === null && hospital.deletedAt !== null) return null;
+        return hospital;
       }),
     },
     $connect: jest.fn(),
@@ -208,6 +219,15 @@ describe('Task (e2e)', () => {
         .send({ status: TaskStatus.COMPLETED })
         .expect(400);
     });
+
+    it('PATCH /hospital/:hospitalId/task/:id rejects status updates outside the dedicated status endpoint', async () => {
+      const task = prisma._seed({ hospitalId: 'h1', status: TaskStatus.PENDING });
+
+      await request(app.getHttpServer())
+        .patch(`/hospital/h1/task/${task.id}`)
+        .send({ status: TaskStatus.COMPLETED })
+        .expect(400);
+    });
   });
 
   describe('Response shape', () => {
@@ -232,6 +252,25 @@ describe('Task (e2e)', () => {
         message: expect.any(String),
         error: expect.any(String),
       });
+    });
+  });
+
+  describe('Hospital existence', () => {
+    it('GET /hospital/:hospitalId/task returns 404 when hospital does not exist', async () => {
+      await request(app.getHttpServer())
+        .get('/hospital/missing-hospital/task')
+        .expect(404);
+    });
+
+    it('POST /hospital/:hospitalId/task returns 404 when hospital does not exist', async () => {
+      await request(app.getHttpServer())
+        .post('/hospital/missing-hospital/task')
+        .send({
+          title: 'Valid title',
+          status: TaskStatus.PENDING,
+          priority: TaskPriority.HIGH,
+        })
+        .expect(404);
     });
   });
 });

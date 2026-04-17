@@ -100,6 +100,12 @@ http://localhost:3000/docs
 
 ## Endpoints
 
+### Health
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/health` | Returns `{ status: "ok", timestamp: "..." }` |
+
 ### Hospital
 
 | Method | Route | Description |
@@ -107,6 +113,7 @@ http://localhost:3000/docs
 | `POST` | `/hospital` | Create hospital |
 | `GET` | `/hospital` | List active hospitals |
 | `GET` | `/hospital/:id` | Get a hospital |
+| `PUT` | `/hospital/:id` | Replace hospital |
 | `PATCH` | `/hospital/:id` | Update hospital |
 | `DELETE` | `/hospital/:id` | Delete hospital (soft delete) |
 
@@ -171,12 +178,33 @@ PENDING → CANCELLED
 # unit tests
 npm run test
 
+# e2e tests
+npm run test:e2e
+
 # watch mode
 npm run test:watch
 
 # coverage
 npm run test:cov
 ```
+
+Current repository coverage: `92%` statements with `npm run test:cov`.
+
+---
+
+## IA in the Workflow
+
+### How AI was used
+
+- Claude Code was used as a development assistant to propose tests, suggest refactors, and help scaffold Swagger/OpenAPI documentation.
+- The final implementation decisions stayed in the code review loop: every suggestion had to match the project rules around soft delete, multi-tenancy, and NestJS exception handling.
+- AI suggestions were useful for generating fast first drafts, but the final behavior still had to be validated with Jest and e2e tests.
+
+### What I learned using AI
+
+- AI is useful for speeding up repetitive work like test setup and documentation, but it can miss project-specific constraints if prompts are too generic.
+- The most important part was reviewing every generated change against business rules, especially task status transitions and tenant isolation.
+- TDD still matters with AI: generated code is only trustworthy after the failing test, the implementation, and the refactor all line up.
 
 ---
 
