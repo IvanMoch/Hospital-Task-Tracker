@@ -15,6 +15,7 @@ const mockTaskService = {
   update: jest.fn(),
   remove: jest.fn(),
   updateStatus: jest.fn(),
+  getStats: jest.fn(),
 };
 
 const baseTask = {
@@ -121,6 +122,24 @@ describe('TaskController', () => {
 
       expect(mockTaskService.updateStatus).toHaveBeenCalledWith('h1', '1', TaskStatus.IN_PROGRESS);
       expect(result).toEqual(updated);
+    });
+  });
+
+  describe('GET /hospital/:hospitalId/task/stats', () => {
+    it('should call service.getStats with hospitalId and return count+percentage per status', async () => {
+      const stats = {
+        [TaskStatus.PENDING]:     { count: 3, percentage: 75 },
+        [TaskStatus.IN_PROGRESS]: { count: 1, percentage: 25 },
+        [TaskStatus.COMPLETED]:   { count: 0, percentage: 0 },
+        [TaskStatus.CANCELLED]:   { count: 0, percentage: 0 },
+      };
+
+      mockTaskService.getStats.mockResolvedValue(stats);
+
+      const result = await controller.getStats('h1');
+
+      expect(mockTaskService.getStats).toHaveBeenCalledWith('h1');
+      expect(result).toEqual(stats);
     });
   });
 });

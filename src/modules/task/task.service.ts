@@ -62,4 +62,24 @@ export class TaskService {
     }
     return this.prisma.task.update({ where: { id }, data: { status: newStatus } });
   }
+
+  async getStats(hospitalId: string): Promise<Record<TaskStatus, { count: number; percentage: number }>> {
+    const rows = await this.prisma.task.groupBy({
+      by: ['status'],
+      where: { hospitalId, deletedAt: null },
+      _count: { status: true },
+    });
+
+    const countByStatus = Object.fromEntries(rows.map((r) => [r.status, r._count.status]));
+    const total = rows.reduce((sum, r) => sum + r._count.status, 0);
+
+    return Object.values(TaskStatus).reduce(
+      (acc, status) => {
+        const count = countByStatus[status] ?? 0;
+        const percentage = total === 0 ? 0 : Math.round((count / total) * 10000) / 100;
+        return { ...acc, [status]: { count, percentage } };
+      },
+      {} as Record<TaskStatus, { count: number; percentage: number }>,
+    );
+  }
 }

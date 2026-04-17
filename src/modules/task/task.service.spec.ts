@@ -14,6 +14,7 @@ const mockPrismaService = {
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    groupBy: jest.fn(),
   },
 };
 
@@ -245,6 +246,54 @@ describe('TaskService', () => {
       mockPrismaService.task.findUnique.mockResolvedValue(null);
 
       await expect(service.updateStatus('h1', '999', TaskStatus.IN_PROGRESS)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getStats', () => {
+    it('should return counts per status including zeros for missing ones', async () => {
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { status: TaskStatus.PENDING, _count: { status: 3 } },
+        { status: TaskStatus.IN_PROGRESS, _count: { status: 1 } },
+      ]);
+
+      const result = await service.getStats('h1');
+
+      expect(mockPrismaService.task.groupBy).toHaveBeenCalledWith({
+        by: ['status'],
+        where: { hospitalId: 'h1', deletedAt: null },
+        _count: { status: true },
+      });
+      expect(result).toEqual({
+        [TaskStatus.PENDING]:     { count: 3, percentage: 75 },
+        [TaskStatus.IN_PROGRESS]: { count: 1, percentage: 25 },
+        [TaskStatus.COMPLETED]:   { count: 0, percentage: 0 },
+        [TaskStatus.CANCELLED]:   { count: 0, percentage: 0 },
+      });
+    });
+
+    it('should return zeros for all statuses when hospital has no tasks', async () => {
+      mockPrismaService.task.groupBy.mockResolvedValue([]);
+
+      const result = await service.getStats('h1');
+
+      expect(result).toEqual({
+        [TaskStatus.PENDING]:     { count: 0, percentage: 0 },
+        [TaskStatus.IN_PROGRESS]: { count: 0, percentage: 0 },
+        [TaskStatus.COMPLETED]:   { count: 0, percentage: 0 },
+        [TaskStatus.CANCELLED]:   { count: 0, percentage: 0 },
+      });
+    });
+
+    it('should round percentage to 2 decimal places', async () => {
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { status: TaskStatus.PENDING, _count: { status: 1 } },
+        { status: TaskStatus.IN_PROGRESS, _count: { status: 2 } },
+      ]);
+
+      const result = await service.getStats('h1');
+
+      expect(result[TaskStatus.PENDING].percentage).toBe(33.33);
+      expect(result[TaskStatus.IN_PROGRESS].percentage).toBe(66.67);
     });
   });
 });
