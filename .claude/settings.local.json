@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npx @nestjs/cli new . --skip-git --package-manager npm)",
       "Bash(npm install *)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('nestjs/config:', p.dependencies['@nestjs/config']\\); console.log\\('zod:', p.dependencies['zod']\\);\")",
+      "Bash(npx jest *)",
+      "Bash(docker compose *)"
     ]
   }
 }
